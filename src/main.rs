@@ -1,4 +1,3 @@
-mod cache;
 mod error;
 mod handler;
 
@@ -6,6 +5,7 @@ use axum::{routing::get, Extension, Router};
 use handler::HiAnime;
 use shuttle_runtime::SecretStore;
 use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use aniscraper::{env::SecretConfig, hianime::HiAnimeRust};
 
@@ -37,6 +37,7 @@ async fn axum(#[shuttle_runtime::Secrets] secret_store: SecretStore) -> shuttle_
         accept_header: secret_store.get("ACCEPT_HEADER").unwrap_or_default(),
     };
 
+    let hianime_cache = Arc::new(Mutex::new(HiAnime::new()));
     let hianime = Arc::new(HiAnimeRust::new(Some(secret_config)).await);
 
     let router = Router::new()
@@ -49,7 +50,8 @@ async fn axum(#[shuttle_runtime::Secrets] secret_store: SecretStore) -> shuttle_
         .route("/hianime/:category", get(HiAnime::get_category_results))
         .route("/hianime/search/:query", get(HiAnime::get_search_results))
         .route("/hianime/atoz-list", get(HiAnime::get_atoz_list_results))
-        .layer(Extension(hianime));
+        .layer(Extension(hianime))
+        .layer(Extension(hianime_cache));
 
     Ok(router.into())
 }
