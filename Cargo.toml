@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-aniscraper = "0.1.1"
+aniscraper = "0.1.2"
 axum = "0.7.5"
 moka = { version = "0.12.8", features = ["future"] }
 serde = "1.0.210"

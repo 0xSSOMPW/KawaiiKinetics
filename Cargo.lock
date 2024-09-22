@@ -71,9 +71,9 @@ dependencies = [
 
 [[package]]
 name = "aniscraper"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac80c701dca799b012870868460f4f5cd50828a8f64763f82e650db2f437a734"
+checksum = "7d98c9905a7243bc43d791f42de70e33fbba0c42719059c4e761b4d8cb446684"
 dependencies = [
  "base64 0.22.1",
  "brotli",
