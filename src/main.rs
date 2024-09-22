@@ -50,6 +50,14 @@ async fn axum(#[shuttle_runtime::Secrets] secret_store: SecretStore) -> shuttle_
         .route("/hianime/:category", get(HiAnime::get_category_results))
         .route("/hianime/search/:query", get(HiAnime::get_search_results))
         .route("/hianime/atoz-list", get(HiAnime::get_atoz_list_results))
+        .route(
+            "/hianime/episode-src/:anime_id",
+            get(HiAnime::get_server_list),
+        )
+        .route(
+            "/hianime/episode-src-links/:anime_id",
+            get(HiAnime::get_streaming_links),
+        )
         .layer(Extension(hianime))
         .layer(Extension(hianime_cache));
 

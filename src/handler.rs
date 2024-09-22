@@ -1,6 +1,9 @@
 use crate::error::KawaiiError;
-use aniscraper::hianime::{
-    AboutAnime, AtoZ, CategoryInfo, EpisodesInfo, HiAnimeRust, HomeInfo, SearchInfo,
+use aniscraper::{
+    hianime::{
+        AboutAnime, AtoZ, CategoryInfo, EpisodesInfo, HiAnimeRust, HomeInfo, SearchInfo, ServerInfo,
+    },
+    servers::{AnimeServer, EpisodeType, ServerExtractedInfo},
 };
 use axum::{
     extract::{Path, Query},
@@ -19,11 +22,16 @@ pub struct HiAnime {
     category_cache: Cache<(String, u32), CategoryInfo>,
     search_cache: Cache<(String, u32), SearchInfo>,
     atoz_cache: Cache<u32, AtoZ>,
+    server_cache: Cache<String, ServerInfo>,
+    streaming_links_cache: Cache<String, ServerExtractedInfo>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SearchQuery {
     pub page: Option<u32>,
+    pub ep: Option<u32>,
+    pub server: Option<String>,
+    pub category: Option<String>,
 }
 
 impl HiAnime {
@@ -46,6 +54,12 @@ impl HiAnime {
                 .build(),
             atoz_cache: Cache::builder()
                 .time_to_live(Duration::from_secs(3600 * 24)) // 1 day
+                .build(),
+            server_cache: Cache::builder()
+                .time_to_live(Duration::from_secs(3600 * 24 * 31)) // 1 day
+                .build(),
+            streaming_links_cache: Cache::builder()
+                .time_to_live(Duration::from_secs(3600 * 24 * 31)) // 1 day
                 .build(),
         }
     }
@@ -157,5 +171,54 @@ impl HiAnime {
             })
             .await?;
         Ok(Json(atoz_result))
+    }
+
+    pub async fn get_server_list(
+        Path(query): Path<String>,
+        Query(query_params): Query<SearchQuery>,
+        Extension(hianime): Extension<Arc<HiAnimeRust>>,
+        Extension(cache): Extension<Arc<Mutex<HiAnime>>>,
+    ) -> Result<Json<ServerInfo>, KawaiiError> {
+        let ep_id_no = query_params.ep.ok_or(KawaiiError::NotFound)?;
+
+        let ep_id = format!("{}?ep={}", query, ep_id_no);
+        let cache = cache.lock().await;
+
+        let server_list = cache
+            .server_cache
+            .try_get_with_by_ref(&ep_id, async {
+                hianime
+                    .scrape_servers(&ep_id)
+                    .await
+                    .map_err(KawaiiError::from)
+            })
+            .await?;
+
+        Ok(Json(server_list))
+    }
+
+    pub async fn get_streaming_links(
+        Path(query): Path<String>,
+        Query(query_params): Query<SearchQuery>,
+        Extension(hianime): Extension<Arc<HiAnimeRust>>,
+        Extension(cache): Extension<Arc<Mutex<HiAnime>>>,
+    ) -> Result<Json<ServerExtractedInfo>, KawaiiError> {
+        let ep_id_no = query_params.ep.ok_or(KawaiiError::NotFound)?;
+        let server_param = query_params.server.unwrap_or_default();
+        let server = AnimeServer::from_str(&server_param);
+        let category_param = query_params.category.unwrap_or_default();
+        let category = EpisodeType::from_str(&category_param);
+        let ep_id = format!("{}?ep={}", query, ep_id_no);
+        let cache = cache.lock().await;
+        let streaming_links = cache
+            .streaming_links_cache
+            .try_get_with_by_ref(&ep_id, async {
+                hianime
+                    .scrape_episode_server_source(&ep_id, category, Some(server))
+                    .await
+                    .map_err(KawaiiError::from)
+            })
+            .await?;
+        Ok(Json(streaming_links))
     }
 }
