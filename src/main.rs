@@ -42,20 +42,20 @@ async fn axum(#[shuttle_runtime::Secrets] secret_store: SecretStore) -> shuttle_
 
     let router = Router::new()
         .route("/hianime/home", get(HiAnime::get_home))
-        .route("/hianime/anime/:anime_id", get(HiAnime::get_anime_info))
+        .route("/hianime/anime/{anime_id}", get(HiAnime::get_anime_info))
         .route(
-            "/hianime/anime/:anime_id/episodes",
+            "/hianime/anime/{anime_id}/episodes",
             get(HiAnime::get_anime_episodes),
         )
-        .route("/hianime/:category", get(HiAnime::get_category_results))
-        .route("/hianime/search/:query", get(HiAnime::get_search_results))
+        .route("/hianime/{category}", get(HiAnime::get_category_results))
+        .route("/hianime/search/{query}", get(HiAnime::get_search_results))
         .route("/hianime/atoz-list", get(HiAnime::get_atoz_list_results))
         .route(
-            "/hianime/episode-src/:anime_id",
+            "/hianime/episode-src/{anime_id}",
             get(HiAnime::get_server_list),
         )
         .route(
-            "/hianime/episode-src-links/:anime_id",
+            "/hianime/episode-src-links/{anime_id}",
             get(HiAnime::get_streaming_links),
         )
         .layer(Extension(hianime))
